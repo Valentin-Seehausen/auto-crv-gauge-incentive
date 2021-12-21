@@ -6,8 +6,6 @@ interface erc20 {
         external
         returns (bool);
 
-    function decimals() external view returns (uint8);
-
     function balanceOf(address) external view returns (uint256);
 
     function transferFrom(
@@ -37,50 +35,85 @@ interface BribeV2 {
         returns (uint256);
 }
 
+/**
+ * @title Bribe Automation
+ * @author Valentin Seehausen
+ * @notice Bribes once per period (one week). Fillable by everyone.
+ * No admin controls.
+ */
 contract BribeAutomation {
     BribeV2 bribev2 = BribeV2(0x7893bbb46613d7a4FbcC31Dab4C9b823FfeE1026);
     address gauge;
-    address reward_token;
+    erc20 reward_token;
     uint256 amount_per_vote;
     uint256 active_period;
 
+    /**
+     * @notice These params can not be changed later.
+     * @param _gauge `LiquidityGauge` contract address
+     * @param _reward_token `ERC20` contract address
+     * @param _amount_per_vote uint256
+     */
     constructor(
         address _gauge,
         address _reward_token,
         uint256 _amount_per_vote
     ) {
         gauge = _gauge;
-        reward_token = _reward_token;
+        reward_token = erc20(_reward_token);
         amount_per_vote = _amount_per_vote;
     }
 
     uint256 constant WEEK = 86400 * 7;
-    uint256 constant PRECISION = 10**18;
 
+    /**
+     * @notice Fill with reward_token. Sender has to approve amount first.
+     * All amounts welcome.
+     * @param amount uint256
+     */
     function fill(uint256 amount) external {
-        erc20(reward_token).transferFrom(msg.sender, address(this), amount);
+        reward_token.transferFrom(msg.sender, address(this), amount);
     }
 
+    /**
+     * @notice Can only bribe once per week. Can only bribe when balance is
+     * higher than amount_per_vote. Possible a small refill is required to be
+     * able to vote again.
+     */
     function bribe() external {
         require(
             block.timestamp >= active_period + WEEK,
             "already bribed in this period"
         );
-        erc20(reward_token).approve(address(bribev2), amount_per_vote);
+        reward_token.approve(address(bribev2), amount_per_vote);
+        require(balance() >= amount_per_vote, "not enough funds");
         require(
-            erc20(reward_token).balanceOf(address(this)) >= amount_per_vote,
-            "not enough funds"
-        );
-        require(
-            bribev2.add_reward_amount(gauge, reward_token, amount_per_vote),
+            bribev2.add_reward_amount(
+                gauge,
+                address(reward_token),
+                amount_per_vote
+            ),
             "add_reward_amount failed"
         );
-        active_period = bribev2.active_period(gauge, reward_token);
+        active_period = bribev2.active_period(gauge, address(reward_token));
+    }
+
+    /**
+     * @notice Returns token balance.
+     */
+    function balance() public view returns (uint256) {
+        return reward_token.balanceOf(address(this));
     }
 }
 
+/**
+ * @title Bribe Factory
+ * @author Valentin Seehausen
+ * @notice Creates BribeAutomations. Keeps record of BribeAutomations on chain.
+ */
 contract BribeFactory {
     struct Bribe {
+        // Represents a BribeAutomation
         address smart_contract;
         address gauge;
         address reward_token;
@@ -89,6 +122,11 @@ contract BribeFactory {
 
     Bribe[] _bribe_automations;
 
+    /**
+     * @notice Deploys a new smart contract for the BribeAutomation.
+     * Safes details on chain. Filling up BribeAutomation has to happen in a
+     * seperate call.
+     */
     function create_bribe_automation(
         address gauge,
         address reward_token,
@@ -108,6 +146,9 @@ contract BribeFactory {
         _bribe_automations.push(bribe);
     }
 
+    /**
+     * @notice Returns all deployed BribeAutomations
+     */
     function get_bribe_automations()
         external
         view
