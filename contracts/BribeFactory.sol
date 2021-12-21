@@ -1,22 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-interface erc20 {
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-
-    function balanceOf(address) external view returns (uint256);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-}
-
 interface BribeV2 {
     function active_period(address gauge, address reward_token)
         external
@@ -35,6 +19,18 @@ interface BribeV2 {
         returns (uint256);
 }
 
+interface erc20 {
+    function balanceOf(address) external view returns (uint256);
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
+
+    function approve(address spender, uint256 amount) external returns (bool);
+}
+
 /**
  * @title Bribe Automation
  * @author Valentin Seehausen
@@ -47,6 +43,7 @@ contract BribeAutomation {
     erc20 reward_token;
     uint256 amount_per_vote;
     uint256 active_period;
+    uint256 constant WEEK = 86400 * 7;
 
     /**
      * @notice These params can not be changed later.
@@ -63,8 +60,6 @@ contract BribeAutomation {
         reward_token = erc20(_reward_token);
         amount_per_vote = _amount_per_vote;
     }
-
-    uint256 constant WEEK = 86400 * 7;
 
     /**
      * @notice Fill with reward_token. Sender has to approve amount first.
