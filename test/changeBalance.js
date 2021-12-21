@@ -5,11 +5,7 @@ const changeBalance = async (token, account, balance, storageIndex = 2) => {
     ["uint256", "uint256"],
     [account, storageIndex] // key, slot
   );
-  await setStorageAt(
-    token,
-    index.toString(),
-    toBytes32(ethers.utils.parseUnits(balance)).toString()
-  );
+  await setStorageAt(token, index.toString(), toBytes32(balance).toString());
 };
 
 const toBytes32 = (bn) => {

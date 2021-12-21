@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import "hardhat/console.sol";
+
 interface erc20 {
     function transfer(address recipient, uint256 amount)
         external
@@ -30,25 +32,88 @@ interface BribeV2 {
         address reward_token,
         uint256 amount
     ) external returns (bool);
+
+    function reward_per_token(address gauge, address reward_token)
+        external
+        view
+        returns (uint256);
 }
 
-contract BribeAutomater {
+contract BribeAutomation {
+    BribeV2 bribev2 = BribeV2(0x7893bbb46613d7a4FbcC31Dab4C9b823FfeE1026);
+    address gauge;
+    address reward_token;
+    uint256 amount_per_vote;
+
+    constructor(
+        address _gauge,
+        address _reward_token,
+        uint256 _amount_per_vote
+    ) {
+        gauge = _gauge;
+        reward_token = _reward_token;
+        amount_per_vote = _amount_per_vote;
+    }
+
     uint256 constant WEEK = 86400 * 7;
     uint256 constant PRECISION = 10**18;
 
-    function fill() external {}
+    function fill(uint256 amount) external {
+        require(
+            erc20(reward_token).transferFrom(msg.sender, address(this), amount),
+            "transfer failed"
+        );
+    }
 
-    function bribe() external {}
+    function bribe() external {
+        console.log("starting bribe");
+        console.log(amount_per_vote);
+        erc20(reward_token).approve(address(bribev2), amount_per_vote);
+        require(
+            erc20(reward_token).balanceOf(address(this)) >= amount_per_vote,
+            "Not enough funds"
+        );
+        require(
+            bribev2.add_reward_amount(gauge, reward_token, amount_per_vote),
+            "add_reward_amount failed"
+        );
+    }
 }
 
 contract BribeFactory {
     struct Bribe {
-        address token;
+        address smart_contract;
         address gauge;
+        address reward_token;
         uint256 amount_per_vote;
     }
 
-    function create_bribe() external {}
+    Bribe[] _bribe_automations;
 
-    function get_bribes() external view returns (Bribe[] memory) {}
+    function create_bribe_automation(
+        address gauge,
+        address reward_token,
+        uint256 amount_per_vote
+    ) external {
+        BribeAutomation bribe_address = new BribeAutomation(
+            gauge,
+            reward_token,
+            amount_per_vote
+        );
+        Bribe memory bribe = Bribe(
+            address(bribe_address),
+            gauge,
+            reward_token,
+            amount_per_vote
+        );
+        _bribe_automations.push(bribe);
+    }
+
+    function get_bribe_automations()
+        external
+        view
+        returns (Bribe[] memory bribe_automations)
+    {
+        return _bribe_automations;
+    }
 }
