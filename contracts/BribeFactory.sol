@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "hardhat/console.sol";
-
 interface erc20 {
     function transfer(address recipient, uint256 amount)
         external
@@ -44,6 +42,7 @@ contract BribeAutomation {
     address gauge;
     address reward_token;
     uint256 amount_per_vote;
+    uint256 active_period;
 
     constructor(
         address _gauge,
@@ -59,24 +58,24 @@ contract BribeAutomation {
     uint256 constant PRECISION = 10**18;
 
     function fill(uint256 amount) external {
-        require(
-            erc20(reward_token).transferFrom(msg.sender, address(this), amount),
-            "transfer failed"
-        );
+        erc20(reward_token).transferFrom(msg.sender, address(this), amount);
     }
 
     function bribe() external {
-        console.log("starting bribe");
-        console.log(amount_per_vote);
+        require(
+            block.timestamp >= active_period + WEEK,
+            "already bribed in this period"
+        );
         erc20(reward_token).approve(address(bribev2), amount_per_vote);
         require(
             erc20(reward_token).balanceOf(address(this)) >= amount_per_vote,
-            "Not enough funds"
+            "not enough funds"
         );
         require(
             bribev2.add_reward_amount(gauge, reward_token, amount_per_vote),
             "add_reward_amount failed"
         );
+        active_period = bribev2.active_period(gauge, reward_token);
     }
 }
 
