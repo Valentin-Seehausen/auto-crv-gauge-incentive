@@ -1,0 +1,35 @@
+# BribeAutomation
+
+This is the submission for the Gitcoin Bounty https://gitcoin.co/issue/reflexer-labs/auto-crv-gauge-incentive/2/100027277.
+
+* **BribeFactory** will deploy a **BribeAutomation**.
+* **BribeAutomation** can receive tokens over *fill*.
+* **BribeAutomation** can bribe once a period(week) and incentivise the Gauge Bribes.
+* **BribeAutomatino** has no admin control and is not depended of any contract.
+* **BribeFactory** keeps a list of all BribeAutomations.
+
+The smart contract is self-contained and has no dependencies to other libraries
+or smart contracts.
+
+# Installation
+
+This project build on hardhat and uses a local mainnet fork for tests.
+Thus it is necessary to:
+
+* Copy `example.env`, rename it to `.env` and include an Alchemy API
+* Run `yarn` or `npm install` in the main directory
+
+# Running tests
+
+* Run `npx hardhat test`
+
+# License
+This project is a submission to a Gitcoin bounty. In the case that this
+submission wins the bounty, all rights of this code will go to Curve,
+Reflexer Labs, or who ever created the bounty.
+
+Apart from that some minor alteration will happily be provided. Examples could
+include altering the payout amount of the last bribe.
+
+MIT License, but copyright is left to Open Currency Technology Seehausen UG
+(haftungsbeschraenkt) until the bounty is won.
